@@ -12,8 +12,11 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+  repository_dispatch:
+    types: [RUN_WORKFLOW_DISPATCH]
+
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -23,7 +26,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  importer:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+
+      - run: npm install
+
+      - run: node _scripts/notion-import.js
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          DATABASE_ID: ${{ secrets.DATABASE_ID }}
+
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          commit_message: "[BOT] Commit & Deploy from Notion"
+          branch: main
+          commit_user_name: morimin-bot 🤖
+          commit_user_email: morimin@github.com
+          commit_author: morimin-bot 🤖 <morimin@github.com>
+
   build:
+    needs: importer
     runs-on: ubuntu-latest
 
     steps:
